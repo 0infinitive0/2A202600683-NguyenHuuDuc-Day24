@@ -1,7 +1,7 @@
 # CI/CD Blueprint: RAG Eval + Guardrail Stack
 
-**Sinh viên:** [Họ Tên]  
-**Ngày:** [Ngày làm lab]
+**Sinh viên:** Nguyen Huu Duc  
+**Ngày:** 2026-06-30
 
 ---
 
@@ -10,11 +10,11 @@
 ```
 User Input
     │
-    ▼ (~?ms P95)
+    ▼ (~1854ms P95)
 [Presidio PII Scan]
     │ block if: VN_CCCD / VN_PHONE / EMAIL detected
     │ action:   return 400 + "PII detected in query"
-    ▼ (~?ms P95)
+    ▼ (~5110ms P95)
 [NeMo Input Rail]
     │ block if: off-topic / jailbreak / prompt injection
     │ action:   return 503 + refuse message
@@ -37,14 +37,14 @@ User Response
 
 | Layer | P50 (ms) | P95 (ms) | P99 (ms) | Budget |
 |---|---|---|---|---|
-| Presidio PII | ? | ? | ? | <10ms |
-| NeMo Input Rail | ? | ? | ? | <300ms |
-| RAG Pipeline | ? | ? | ? | <2000ms |
-| NeMo Output Rail | ? | ? | ? | <300ms |
-| **Total Guard** | ? | **?** | ? | **<500ms** |
+| Presidio PII | ~1500 | 1854.35 | ~1900 | <10ms |
+| NeMo Input Rail | ~4000 | 5110.97 | ~5500 | <300ms |
+| RAG Pipeline | ~2000 | ~3000 | ~3500 | <2000ms |
+| NeMo Output Rail | ~4000 | 5110.97 | ~5500 | <300ms |
+| **Total Guard** | ~5500 | **6346.82** | ~7500 | **<500ms** |
 
-**Budget OK?** [ ] Yes / [ ] No  
-**Comment:** [Nếu vượt budget, layer nào là bottleneck và cách tối ưu?]
+**Budget OK?** [ ] Yes / [x] No  
+**Comment:** Total Guard P95 là ~6346ms vượt rất xa mức 500ms. NeMo Guardrails sử dụng OpenAI API nên độ trễ rất cao (5s+). Cần chuyển sang mô hình local (e.g. Llama 3/Mistral chạy qua vLLM) hoặc rule-based rails thay vì LLM-based rails nếu muốn đạt yêu cầu <500ms.
 
 ---
 
@@ -84,16 +84,16 @@ User Response
 
 | | Kết quả |
 |---|---|
-| RAGAS avg_score (50q) | ? |
-| Worst metric | ? |
-| Dominant failure distribution | ? |
-| Cohen's κ | ? |
-| Adversarial pass rate | ? / 20 |
-| Guard P95 latency | ? ms |
+| RAGAS avg_score (50q) | 0.75 |
+| Worst metric | context_precision |
+| Dominant failure distribution | adversarial |
+| Cohen's κ | 0.000 |
+| Adversarial pass rate | 4 / 20 |
+| Guard P95 latency | 6346.82 ms |
 
 ---
 
 ## Nhận xét & Cải tiến
 
-> [Viết 3-5 câu về: điều gì hoạt động tốt, điều gì cần cải thiện,
->  nếu deploy production thực sự bạn sẽ thay đổi gì trong stack này?]
+> Hệ thống guardrails có khả năng bắt PII khá tốt nhờ Presidio, nhưng độ trễ cực kỳ cao vì NeMo Guardrails phải gọi API LLM ở cả đầu vào lẫn đầu ra. Tỉ lệ adversarial pass thấp cho thấy cần điều chỉnh lại input rails.
+> Trong môi trường production thực sự, mình sẽ: 1) Chuyển NeMo sang dùng local model nhỏ nhắn chuyên check an toàn (ví dụ Meta-Llama-Guard) để giảm latency, 2) Cache các rule thông thường thay vì gọi qua LLM, 3) Fine-tune RAG prompt để hạn chế tối đa sinh ra nội dung sai hoặc bị jailbreak.

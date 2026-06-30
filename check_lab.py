@@ -88,9 +88,10 @@ def main():
 
     # 6. Test suite
     print("\n[6] Test suite:")
+    import sys
     result = subprocess.run(
-        ["pytest", "tests/", "--tb=short", "-q"],
-        capture_output=True, text=True,
+        [sys.executable, "-m", "pytest", "tests/", "--tb=short", "-q"],
+        capture_output=True, text=True, encoding="utf-8"
     )
     tests_ok = result.returncode == 0
     total += 1
